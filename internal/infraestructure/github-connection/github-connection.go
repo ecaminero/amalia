@@ -17,6 +17,7 @@ type GithubConnection struct {
 	RepoOwner         string         `json:"repo_owner,omitempty"`
 	PullRequestNumber int            `json:"pull_request_number"`
 	EventName         string         `json:"event_name"`
+	GetCommitSHA      string         `json:"get_commit_sha"`
 }
 
 type FileChange struct {
@@ -54,6 +55,12 @@ func NewGithubConnection() (*GithubConnection, error) {
 	if eventName == "" {
 		return nil, fmt.Errorf("GITHUB_EVENT_NAME environment variable is not set")
 	}
+
+	GetCommitSHA := os.Getenv("GITHUB_SHA")
+	if eventName == "" {
+		return nil, fmt.Errorf("GITHUB_SHA environment variable is not set")
+	}
+
 	GithubClient := github.NewClient(nil).WithAuthToken(token)
 
 	return &GithubConnection{
@@ -62,6 +69,7 @@ func NewGithubConnection() (*GithubConnection, error) {
 		RepoOwner:         repoOwner,
 		PullRequestNumber: pullRequestNumber,
 		EventName:         eventName,
+		GetCommitSHA:      GetCommitSHA,
 	}, nil
 }
 
@@ -109,15 +117,9 @@ func (receiver *GithubConnection) CreateComment(files []github.CommitFile) error
 
 	for _, file := range files {
 		fmt.Printf("Filename: %s\n", file.GetFilename())
-		fmt.Printf("Patch: %s\n", file.GetPatch())
-
-		comments, err := analyzeFileAndCreateComments(&file)
-		if err != nil {
-			return fmt.Errorf("error analyzing file %s: %w", file.GetFilename(), err)
-		}
-
+		comments := analyzeFileAndCreateComments(&file)
 		for _, commentData := range comments {
-			comment, _, err := receiver.Client.PullRequests.CreateComment(
+			reviewComment, _, err := receiver.Client.PullRequests.CreateComment(
 				ctx,
 				receiver.RepoOwner,
 				receiver.RepositoryName,
@@ -126,14 +128,14 @@ func (receiver *GithubConnection) CreateComment(files []github.CommitFile) error
 			if err != nil {
 				return fmt.Errorf("error creating PullRequest comment: %w", err)
 			}
-			fmt.Printf("Review comment created: %s\n", comment.GetHTMLURL())
+			fmt.Printf("Review comment id: %d\n", reviewComment.GetID())
 		}
 	}
 
 	return nil
 }
 
-func analyzeFileAndCreateComments(file *github.CommitFile) ([]*github.PullRequestComment, error) {
+func analyzeFileAndCreateComments(file *github.CommitFile) []*github.PullRequestComment {
 	var comments []*github.PullRequestComment
 	patch := file.GetPatch()
 	lines := strings.Split(patch, "\n")
@@ -163,19 +165,18 @@ func analyzeFileAndCreateComments(file *github.CommitFile) ([]*github.PullReques
 			}
 		}
 	}
-
 	// Handle case where file ends with new lines
 	if startLine != 0 {
 		comment := createCommentForLines(file, position, startLine, endLine, newLines)
 		comments = append(comments, comment)
 	}
-
-	return comments, nil
+	return comments
 }
 
 func createCommentForLines(file *github.CommitFile, position, startLine, endLine int, lines []string) *github.PullRequestComment {
 	commentBody := fmt.Sprintf("Code Review %s - New lines %d to %d:\n\n", time.Now().Format("2006-01-02 15:04:05"), startLine, endLine)
 	commentBody += strings.Join(lines, "\n")
+	fmt.Printf("Comment body: %s\n", commentBody)
 
 	return &github.PullRequestComment{
 		Body:     github.String(commentBody),
