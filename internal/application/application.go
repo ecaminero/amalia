@@ -1,7 +1,7 @@
 package application
 
 import (
-	"ai-codereview/internal/domain"
+	"amalia/internal/domain"
 
 	"github.com/google/go-github/v61/github"
 )

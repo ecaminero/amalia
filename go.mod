@@ -1,4 +1,4 @@
-module ai-codereview
+module amalia
 
 go 1.22.1
 

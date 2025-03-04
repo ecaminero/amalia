@@ -1,9 +1,9 @@
 package main
 
 import (
-	"ai-codereview/internal/application"
-	github_connection "ai-codereview/internal/infraestructure/github-connection"
-	stub_persistence "ai-codereview/internal/infraestructure/stub"
+	github_connection "amalia/internal/infraestructure/github-connection"
+	stub_persistence "amalia/internal/infraestructure/stub"
+	"amalia/internal/application"
 
 	"fmt"
 	"log"

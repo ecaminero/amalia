@@ -1,5 +1,7 @@
 # Created by https://www.toptal.com/developers/gitignore/api/go,goland+all,linux,osx,windows,vim,nanoc,visualstudiocode,visualstudio,test
 # Edit at https://www.toptal.com/developers/gitignore?templates=go,goland+all,linux,osx,windows,vim,nanoc,visualstudiocode,visualstudio,test
+# Inteli
+.idea/
 
 ### Go ###
 # If you prefer the allow list template instead of the deny list, see community template:
