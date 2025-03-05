@@ -1,9 +1,9 @@
 package main
 
 import (
-	github_connection "amalia/internal/infraestructure/github-connection"
-	stub_persistence "amalia/internal/infraestructure/stub"
 	"amalia/internal/application"
+	anthropic "amalia/internal/infraestructure/anthropic-connection"
+	github_connection "amalia/internal/infraestructure/github-connection"
 
 	"fmt"
 	"log"
@@ -21,12 +21,16 @@ func print_all_variables() {
 }
 
 func main() {
+	var err error
 	githubConnection, err := github_connection.NewGithubConnection()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	aiModel := stub_persistence.NewStubModelRepository()
+	aiModel, err := anthropic.NewAnthropicConnection()
+	if err != nil {
+		log.Fatal(err)
+	}
 	app := application.NewApp(githubConnection, aiModel)
 	eventName := githubConnection.GetEventName()
 	switch eventName {

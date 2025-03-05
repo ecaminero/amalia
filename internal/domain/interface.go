@@ -1,5 +1,5 @@
 package domain
 
 type IAIModel interface {
-	GetComment() string
+	GetComment(content string) (string, error)
 }
