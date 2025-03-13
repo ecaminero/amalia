@@ -2,7 +2,6 @@ package application
 
 import (
 	"amalia/internal/domain"
-
 	"github.com/google/go-github/v61/github"
 )
 

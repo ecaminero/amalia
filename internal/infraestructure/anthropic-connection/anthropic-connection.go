@@ -1,30 +1,19 @@
 package anthropic_connection
 
 import (
-	"bytes"
-	"encoding/json"
+	"context"
 	"fmt"
-	"io"
-	"net/http"
+	"github.com/anthropics/anthropic-sdk-go"
+	"github.com/anthropics/anthropic-sdk-go/option"
 	"os"
 	"strconv"
 )
 
-const AnthropicAPIEndpoint = "https://api.anthropic.com/v1/complete"
-
 type AnthropicConnection struct {
-	Prompt        string   `json:"prompt"`
-	Model         string   `json:"model"`
-	MaxTokens     int      `json:"max_tokens_to_sample"`
-	StopSequences []string `json:"stop_sequences,omitempty"`
-	Temperature   float64  `json:"temperature,omitempty"`
-	TopK          int      `json:"top_k,omitempty"`
-	TopP          float64  `json:"top_p,omitempty"`
-	ApiKey        string   `json:"api_key"`
-}
-
-type AnthropicResponse struct {
-	Completion string `json:"completion"`
+	Client       *anthropic.Client `json:"client"`
+	Model        anthropic.Model   `json:"model"`
+	SystemPrompt string            `json:"systemPrompt"`
+	MaxTokens    int64             `json:"max_tokens"`
 }
 
 func NewAnthropicConnection() (*AnthropicConnection, error) {
@@ -33,67 +22,55 @@ func NewAnthropicConnection() (*AnthropicConnection, error) {
 		return nil, fmt.Errorf("ANTHROPIC_API_KEY environment variable is not set")
 	}
 
-	model := os.Getenv("ANTHROPIC_MODEL")
-	if model == "" {
-		model = "claude-3-5-sonnet-20240620"
-	}
-
 	maxTokensStr := os.Getenv("ANTHROPIC_MAX_TOKENS")
 	if maxTokensStr == "" {
 		maxTokensStr = "1024"
 	}
 
-	maxTokens, err := strconv.Atoi(maxTokensStr)
+	modelKey := os.Getenv("ANTHROPIC_MODEL")
+	model, found := GetModel(modelKey)
+	if !found {
+		return nil, fmt.Errorf("model not found: %s", modelKey)
+	}
+
+	maxTokens, err := strconv.ParseInt(maxTokensStr, 10, 64)
 	if err != nil {
 		return nil, fmt.Errorf("error converting maxTokens to int: %w", err)
 	}
 
+	client := anthropic.NewClient(
+		option.WithAPIKey(apiKey),
+	)
+	var SystemPrompt = "Be very serious"
+
 	return &AnthropicConnection{
-		ApiKey:      apiKey,
-		Model:       model,
-		MaxTokens:   maxTokens,
-		Temperature: maxTokens || 0.7, // You can adjust these parameters
-		TopK:        -1,               // as needed
-		TopP:        -1,
+		Client:       client,
+		MaxTokens:    maxTokens,
+		Model:        model,
+		SystemPrompt: SystemPrompt,
 	}, nil
 }
 
-func CallAnthropicAPI(receiver *AnthropicConnection, prompt string) (string, error) {
+func (a AnthropicConnection) GetComment(content string) (string, error) {
+	messages := []anthropic.MessageParam{
+		anthropic.NewUserMessage(anthropic.NewTextBlock(content)),
+	}
 
-	jsonData, err := json.Marshal(request)
+	println("[user]: " + content)
+	message, err := a.Client.Messages.New(context.TODO(),
+		anthropic.MessageNewParams{
+			Model: anthropic.F(a.Model),
+			System: anthropic.F([]anthropic.TextBlockParam{
+				anthropic.NewTextBlock(a.SystemPrompt),
+			}), MaxTokens: anthropic.F(a.MaxTokens),
+			Messages:      anthropic.F(messages),
+		})
+
 	if err != nil {
-		return "", fmt.Errorf("error marshalling request: %w", err)
+		return "", err
 	}
 
-	req, err := http.NewRequest("POST", AnthropicAPIEndpoint, bytes.NewBuffer(jsonData))
-	if err != nil {
-		return "", fmt.Errorf("error creating request: %w", err)
-	}
+	println("[assistant]: " + message.Content[0].Text + message.StopSequence)
+	return message.Content[0].Text, nil
 
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-API-Key", apiKey)
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("error making request: %w", err)
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(io.Reader(resp.Body))
-	if err != nil {
-		return "", fmt.Errorf("error reading response body: %w", err)
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("API request failed with status code %d: %s", resp.StatusCode, string(body))
-	}
-
-	var apiResponse AnthropicResponse
-	err = json.Unmarshal(body, &apiResponse)
-	if err != nil {
-		return "", fmt.Errorf("error unmarshalling response: %w", err)
-	}
-
-	return apiResponse.Completion, nil
 }

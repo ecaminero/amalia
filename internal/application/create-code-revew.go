@@ -16,7 +16,8 @@ func (a *App) CreateCodeReview() {
 	if err != nil {
 		log.Fatalf("Error: %v\n", err)
 	}
-	err = a.codeRepositoryProvider.CreateComment(changes)
+
+	err = a.aiModel.GetComment(changes)
 	if err != nil {
 		log.Fatalf("Error: %v\n", err)
 	}

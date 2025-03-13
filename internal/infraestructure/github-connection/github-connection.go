@@ -28,37 +28,37 @@ type FileChange struct {
 func NewGithubConnection() (*GithubConnection, error) {
 	token := os.Getenv("GITHUB_TOKEN")
 	if token == "" {
-		return nil, fmt.Errorf("GITHUB_TOKEN environment variable is not set")
+		return nil, ErrMissingToken
 	}
 
 	repoFullName := os.Getenv("GITHUB_REPOSITORY")
 	if repoFullName == "" {
-		return nil, fmt.Errorf("GITHUB_REPOSITORY environment variable is not set")
+		return nil, ErrMissingRepository
 	}
 	repoParts := strings.Split(repoFullName, "/")
 	if len(repoParts) != 2 {
-		return nil, fmt.Errorf("invalid GITHUB_REPOSITORY format: %s", repoFullName)
+		return nil, WrapInvalidRepoFormatError(repoFullName)
 	}
 	repoOwner := repoParts[0]
 	githubRepositoryName := repoParts[1]
 
 	pullRequestNumberStr := os.Getenv("GITHUB_PR_NUMBER")
 	if pullRequestNumberStr == "" {
-		return nil, fmt.Errorf("GITHUB_PR_NUMBER environment variable is not set")
+		return nil, ErrMissingPR
 	}
 	pullRequestNumber, err := strconv.Atoi(pullRequestNumberStr)
 	if err != nil {
-		return nil, fmt.Errorf("invalid GITHUB_PR_NUMBER: %w", err)
+		return nil, WrapInvalidPRNumberError(err)
 	}
 
 	eventName := os.Getenv("GITHUB_EVENT_NAME")
 	if eventName == "" {
-		return nil, fmt.Errorf("GITHUB_EVENT_NAME environment variable is not set")
+		return nil, ErrMissingEventName
 	}
 
-	GetCommitSHA := os.Getenv("GITHUB_SHA")
-	if eventName == "" {
-		return nil, fmt.Errorf("GITHUB_SHA environment variable is not set")
+	githubCommitSHA := os.Getenv("GITHUB_SHA")
+	if githubCommitSHA == "" {
+		return nil, ErrMissingCommitSHA
 	}
 
 	GithubClient := github.NewClient(nil).WithAuthToken(token)
@@ -69,7 +69,7 @@ func NewGithubConnection() (*GithubConnection, error) {
 		RepoOwner:         repoOwner,
 		PullRequestNumber: pullRequestNumber,
 		EventName:         eventName,
-		GetCommitSHA:      GetCommitSHA,
+		GetCommitSHA:      githubCommitSHA,
 	}, nil
 }
 
@@ -94,7 +94,7 @@ func (receiver *GithubConnection) GetPullRequestChanges() ([]github.CommitFile, 
 			opt)
 
 		if err != nil {
-			return nil, fmt.Errorf("error listing pull request files: %w", err)
+			return nil, WrapListingPRError(err)
 		}
 		for _, file := range files {
 			if file.GetAdditions() == 0 {
@@ -116,19 +116,17 @@ func (receiver *GithubConnection) CreateComment(files []github.CommitFile) error
 	ctx := context.Background()
 
 	for _, file := range files {
-		fmt.Printf("Filename: %s\n", file.GetFilename())
 		comments := analyzeFileAndCreateComments(&file)
 		for _, commentData := range comments {
-			reviewComment, _, err := receiver.Client.PullRequests.CreateComment(
+			_, _, err := receiver.Client.PullRequests.CreateComment(
 				ctx,
 				receiver.RepoOwner,
 				receiver.RepositoryName,
 				receiver.PullRequestNumber,
 				commentData)
 			if err != nil {
-				return fmt.Errorf("error creating PullRequest comment: %w", err)
+				return WrapCreatingCommentError(err)
 			}
-			fmt.Printf("Review comment id: %d\n", reviewComment.GetID())
 		}
 	}
 
@@ -136,6 +134,7 @@ func (receiver *GithubConnection) CreateComment(files []github.CommitFile) error
 }
 
 func analyzeFileAndCreateComments(file *github.CommitFile) []*github.PullRequestComment {
+	// El resto del código se mantiene igual
 	var comments []*github.PullRequestComment
 	patch := file.GetPatch()
 	lines := strings.Split(patch, "\n")
@@ -176,7 +175,6 @@ func analyzeFileAndCreateComments(file *github.CommitFile) []*github.PullRequest
 func createCommentForLines(file *github.CommitFile, position, startLine, endLine int, lines []string) *github.PullRequestComment {
 	commentBody := fmt.Sprintf("Code Review %s - New lines %d to %d:\n\n", time.Now().Format("2006-01-02 15:04:05"), startLine, endLine)
 	commentBody += strings.Join(lines, "\n")
-	fmt.Printf("Comment body: %s\n", commentBody)
 
 	return &github.PullRequestComment{
 		Body:     github.String(commentBody),

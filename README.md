@@ -1,37 +1,126 @@
-<a name="readme-top"></a> 
+# Amalia
 
-<div align="center">
+![Go Version](https://img.shields.io/badge/Go-v1.20%2B-blue)
+![License](https://img.shields.io/badge/License-MIT-green)
+![Status](https://img.shields.io/badge/Status-In%20Development-yellow)
 
-[![Contributors][contributors-shield]][contributors-url]
-[![Forks][forks-shield]][forks-url]
-[![Stargazers][stars-shield]][stars-url]
-[![Issues][issues-shield]][issues-url]
+Amalia is an intelligent code analysis agent built in Go that provides automated analysis and feedback for code in Git pull requests.
 
-<a href="https://github.com/ecaminero/ai-codereview">
-  <img width="300px" src="https://cdn.githubraw.com/ecaminero/ai-codereview/main/docs/images/AI-bot-codereview.png" alt="Logo" width="800" />
-</a>
-  
-## AI CodeReview
-AI CodeReview 'ai-review' is an AI-based code reviewer and summarizer for GitHub pull requests. You can use your own AI model, its designed to be used as a GitHub Action and can be configured to run on every pull request and review comments
+## 🌟 Overview
 
-</div>
+Amalia helps development teams improve code quality by automatically analyzing pull requests, detecting issues, suggesting improvements, and ensuring adherence to best practices. It acts as an additional reviewer that provides consistent and thorough feedback.
 
-### Install:
+## ✨ Features
+
+- **Automated PR Analysis**: Scans code changes in pull requests automatically
+- **Static Code Analysis**: Identifies code smells, anti-patterns, and potential bugs
+- **Best Practices Enforcement**: Ensures code follows team coding standards
+- **Security Vulnerability Detection**: Identifies potential security issues in code
+- **Performance Impact Assessment**: Evaluates how changes might affect application performance
+- **Code Quality Metrics**: Provides metrics on code complexity, test coverage, and maintainability
+- **Contextual Feedback**: Delivers suggestions with explanations and learning resources
+- **Multiple Git Providers**: Works with GitHub, GitLab, Bitbucket, and more
+- **Customizable Rules**: Configure analysis rules based on project-specific requirements
+
+## 🛠️ Technology Stack
+
+- **Go**: Fast and efficient analysis engine
+- **Git API Integrations**: Interfaces with various Git providers
+- **AST Parsing**: Deep code analysis at the syntax tree level
+- **Concurrency Model**: Leverages Go's goroutines for parallel analysis
+- **Configuration Management**: YAML-based rule configuration
+
+## 📋 Prerequisites
+
+- Go 1.20 or higher
+- Git
+- Access tokens for your Git provider (GitHub, GitLab, etc.)
+
+## 🚀 Installation
+
+### From Source
+
 ```bash
-go mod tidy
+# Clone the repository
+git clone https://github.com/ecaminero/amalia.git
+cd amalia
 
-# Build Image
-GOOS=linux GOARCH=amd64 go build -o dist/main_linux cmd/main.go
+# Build the project
+go build -o amalia cmd/main.go
+
+# Make it available in your PATH
+mv amalia /usr/local/bin/
 ```
 
-#### Environment variables
+### Using Go Install
 
-- `GITHUB_TOKEN`: This should already be available to the GitHub Action
-  environment. This is used to add comments to the pull request.
+```bash
+go install github.com/yourusername/amalia@latest
+```
 
-### Models:
-* [codellama](https://ollama.com/library/codellama) - A large language model that can use text prompts to generate and discuss code.
-    Code Llama is a model for generating and discussing code, built on top of Llama 2. It’s designed to make workflows faster and efficient for developers and make it easier for people to learn how to code. It can generate both code and natural language about code. Code Llama supports many of the most popular programming languages used today, including Python, C++, Java, PHP, Typescript (Javascript), C#, Bash and more.
+## ⚙️ Configuration
+
+Create a configuration file at `~/action.yml`:
+
+## 🔍 Usage
+
+
+### GitHub Action Integration
+
+```yaml
+# .github/workflows/amalia.yml
+name: Amalia Code Analysis
+permissions:
+  contents: read
+  pull-requests: write
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+  pull_request_review_comment:
+    types: [created]
+
+concurrency:
+  group:
+    ${{ github.repository }}-${{ github.event.number || github.head_ref ||
+    github.sha }}-${{ github.workflow }}-${{ github.event_name ==
+    'pull_request_review_comment' && 'pr_comment' || 'pr' }}
+  cancel-in-progress: ${{ github.event_name != 'pull_request_review_comment' }}
+
+jobs:
+  review:
+    name: AI Reviewer 
+    runs-on: 'ubuntu-latest'
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+      - name: Ai Revewer
+        uses: ./
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
+        with:
+          debug: true
+          path_filters: |
+            !**/*.lock
+            !dist/**
+```
+
+
+
+## 📜 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgements
+
+- The Go community for providing excellent tools and libraries
+- All contributors who have helped shape Amalia
+- Inspiration from existing code analysis tools like SonarQube, CodeClimate, and Golangci-lint
+
+---
+
+Made with by Edwin
 
 ## Contributors
 **¡Thanks to all the collaborators who have made this project possible!**
@@ -39,12 +128,15 @@ GOOS=linux GOARCH=amd64 go build -o dist/main_linux cmd/main.go
 [![Contributors](https://contrib.rocks/image?repo=ecaminero/ai-codereview)](https://github.com/ecaminero/ai-codereview/graphs/contributors)
 
 <p align="right">(<a href="#readme-top">Go back up</a>)</p>
+
 ## 🛠️ Stack
+
 - [![Go][go-badge]][go-url] - An open-source programming language supported by Google.
 
 <p align="right">(<a href="#readme-top">Go back up</a>)</p>
 
 [go-url]: https://go.dev/
+
 [githubaction-url]: https://docs.github.com/en/actions/learn-github-actions/understanding-github-actions
 [go-badge]: https://img.shields.io/badge/go-fff?style=for-the-badge&logo=go&logoColor=bd303a&color=35256
 
