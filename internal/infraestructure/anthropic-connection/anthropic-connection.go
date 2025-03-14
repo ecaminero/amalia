@@ -63,7 +63,7 @@ func (a AnthropicConnection) GetComment(content string) (string, error) {
 			System: anthropic.F([]anthropic.TextBlockParam{
 				anthropic.NewTextBlock(a.SystemPrompt),
 			}), MaxTokens: anthropic.F(a.MaxTokens),
-			Messages:      anthropic.F(messages),
+			Messages: anthropic.F(messages),
 		})
 
 	if err != nil {

@@ -17,9 +17,12 @@ func (a *App) CreateCodeReview() {
 		log.Fatalf("Error: %v\n", err)
 	}
 
-	err = a.aiModel.GetComment(changes)
-	if err != nil {
-		log.Fatalf("Error: %v\n", err)
+	for _, change := range changes {
+		println(change)
+		err = a.aiModel.GetComment("change")
+		if err != nil {
+			log.Fatalf("Error: %v\n", err)
+		}
 	}
 
 }

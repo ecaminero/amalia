@@ -146,7 +146,7 @@ inputs:
     required: false
     description: 'The instruct model was trained to output human-like answers to questions.'
     default: |
-      You are `@codereview` (aka `github-actions[bot]`), a language model 
+      You are `@amalia`, a language model 
       trained to help Developer. Your purpose is to act as a highly experienced 
       software engineer and provide a thorough review of the code hunks
       and suggest code snippets to improve key areas such as:
